@@ -1,7 +1,8 @@
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
-const { sendSuccessResponse, sendErrorResponse } = require("../utils/helper");
+const { sendSuccessResponse, sendErrorResponse } = require("../helper/apiResponse");
+const { generateToken } = require("../helper/generateToken");
+
 
 exports.getAllUser = async (req, res) => {
   try {
@@ -102,9 +103,8 @@ exports.logInUser = async (req, res) => {
     if (!isPasswordMatch) {
       return sendErrorResponse(res, "Incorrect password", 400, "fail");
     }
-
-    const JWT_SECRET = process.env.JWT_SECRET;
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+    
+    const token = generateToken({ id: user._id })
     const data = user.toObject();
     delete data.password;
     return sendSuccessResponse(res, { token, data }, 200, "success");
