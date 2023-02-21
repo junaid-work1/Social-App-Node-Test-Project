@@ -1,58 +1,52 @@
-const bcrypt = require("bcrypt");
-const User = require("../models/User");
-const { sendSuccessResponse, sendErrorResponse } = require("../helper/apiResponse");
-const { generateToken } = require("../helper/generateToken");
+import bcrypt from "bcrypt";
 
+import { sendErrorResponse, sendSuccessResponse } from "../helper/apiResponse.js";
+import { generateToken } from "../helper/generateToken.js";
+import User from "../models/User.js";
 
-exports.getAllUser = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({});
-    const result = users.map((item) => {
-      let newItem = item.toObject();
-      delete newItem.password;
-      return newItem;
-    });
-    return sendSuccessResponse(res, result, 200, "success");
+    const users = await User.find({}, "firstName lastName email createdAt");
+    return sendSuccessResponse(res, users, 200, "success");
   } catch (error) {
     return sendErrorResponse(res, error, 500, "fail");
   }
 };
 
-exports.registerUser = async (req, res) => {
-  const { email, password } = req.body;
+export const registerUser = async (req, res) => {
+  const { firstName, lastName, email, password } = req.body;
   try {
+    if (!password || password.trim() === "") {
+      return sendErrorResponse(res, "Password is required", 400, "fail");
+    }
     const user = await User.findOne({ email });
     if (user) {
       return sendErrorResponse(res, "User with this email already exists", 409, "fail");
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    let newUser = new User({ ...req.body, password: hashedPassword });
-    let result = await newUser.save();
-    result = result.toObject();
-    delete result.password;
-    return sendSuccessResponse(res, result, 201, "success");
+
+    const newUser = new User({ firstName, lastName, email, password: hashedPassword });
+    const savedUser = await newUser.save();
+    return sendSuccessResponse(res, savedUser, 201, "success");
   } catch (error) {
     return sendErrorResponse(res, error, 500, "fail");
   }
 };
 
-exports.getsingleUser = async (req, res) => {
+export const getSingleUser = async (req, res) => {
   const userId = req.params.id;
   try {
-    const user = await User.findById(userId);
-    let result = user.toObject();
-    delete result.password;
+    const user = await User.findById(userId, "firstName lastName email createdAt");
     if (!user) {
       return sendErrorResponse(res, "User not found", 404, "fail");
     }
-    return sendSuccessResponse(res, result, 200, "success");
+    return sendSuccessResponse(res, user, 200, "success");
   } catch (error) {
     return sendErrorResponse(res, error, 500, "fail");
   }
 };
 
-exports.deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
   const userId = req.params.id;
   try {
     const deletedUser = await User.findByIdAndDelete(userId);
@@ -65,35 +59,64 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-exports.updateUser = async (req, res) => {
+export const updateUserData = async (req, res) => {
   const userId = req.params.id;
-  let updateData = req.body;
-
-  if (req.body.password) {
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    updateData.password = hashedPassword;
-  }
+  const { firstName, lastName, email } = req.body;
+  const newData = { firstName, lastName, email };
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+    const updatedUser = await User.findByIdAndUpdate(userId, newData, {
       new: true,
       runValidators: true,
     });
     if (!updatedUser) {
       return sendErrorResponse(res, "User not found", 404, "fail");
     }
-    let result = updatedUser.toObject();
-    delete result.password;
-    return sendSuccessResponse(res, result, 200, "success");
+    return sendSuccessResponse(res, "User data updated successfully!", 200, "success");
   } catch (error) {
     return sendErrorResponse(res, error, 500, "fail");
   }
 };
 
-exports.logInUser = async (req, res) => {
+export const updateUserPassword = async (req, res) => {
+  const userId = req.params.id;
+  const { newPassword, currentPassword } = req.body;
+
+  if (!newPassword || newPassword.trim() === "") {
+    return sendErrorResponse(res, "Password is required", 400, "fail");
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendErrorResponse(res, "User not found", 404, "fail");
+    }
+    const isPasswordMatched = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordMatched) {
+      return sendErrorResponse(res, "Incorrect password", 401, "fail");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { password: hashedPassword },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    if (!updatedUser) {
+      return sendErrorResponse(res, "User not found", 404, "fail");
+    }
+    return sendSuccessResponse(res, "Password successfully updated.", 200, "success");
+  } catch (error) {
+    return sendErrorResponse(res, error, 500, "fail");
+  }
+};
+
+export const logInUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
     if (!user) {
       return sendErrorResponse(res, "User not found", 400, "fail");
@@ -103,10 +126,10 @@ exports.logInUser = async (req, res) => {
     if (!isPasswordMatch) {
       return sendErrorResponse(res, "Incorrect password", 400, "fail");
     }
-    
-    const token = generateToken({ id: user._id })
-    const data = user.toObject();
-    delete data.password;
+
+    const token = generateToken({ id: user._id });
+    const { firstName, lastName } = user;
+    const data = { firstName, lastName, email };
     return sendSuccessResponse(res, { token, data }, 200, "success");
   } catch (error) {
     return sendErrorResponse(res, error, 500, "fail");
