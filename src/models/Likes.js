@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const LikeSchema = new Schema({
@@ -19,4 +20,4 @@ const LikeSchema = new Schema({
 
 const Like = mongoose.model("Like", LikeSchema);
 
-module.exports = Like;
+export default Like
