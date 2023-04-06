@@ -1,5 +1,4 @@
-import mongoose from "mongoose";
-const Schema = mongoose.Schema;
+import mongoose, { Schema } from "mongoose";
 
 const UserSchema = new Schema(
   {
@@ -34,6 +33,28 @@ const UserSchema = new Schema(
   }
 );
 
-const User = mongoose.model("users", UserSchema);
+UserSchema.virtual("posts", {
+  ref: "Post",
+  localField: "_id",
+  foreignField: "user",
+});
+UserSchema.virtual("comments", {
+  ref: "Comment",
+  localField: "_id",
+  foreignField: "user",
+});
+UserSchema.virtual("likes", {
+  ref: "Like",
+  localField: "_id",
+  foreignField: "user",
+});
+
+UserSchema.pre("remove", function (next) {
+  this.model("Post").deleteMany({ user: this._id }, next);
+  this.model("Comment").deleteMany({ user: this._id }, next);
+  this.model("Like").deleteMany({ user: this._id }, next);
+});
+
+const User = mongoose.model("User", UserSchema);
 
 export default User;

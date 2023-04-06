@@ -9,18 +9,22 @@ import {
   updateUserData,
   updateUserPassword,
 } from "../controllers/userController.js";
-import { verifyToken } from "../middlerware/verifyToken.js";
+import { isAuth } from "../middlerware/isAuthentication.js";
 
 const router = express.Router();
 
-router.get("/v1/user-list", [verifyToken], getAllUsers);
-router.get("/v1/get-single-user/:id", [verifyToken], getSingleUser);
+router.get("/v1/user-list", [isAuth], getAllUsers);
 router.get("/v1/verify-email/:verifaicationCode", emailVerification);
 
-router.delete("/v1/delete-user/:id", [verifyToken], deleteUser);
-router.patch("/v1/update-user/:id", [verifyToken], updateUserData);
-router.patch("/v1/update-password/:id", [verifyToken], updateUserPassword);
+router.route("/v1/user/:id")
+    .get([isAuth], getSingleUser)
+    .delete([isAuth], deleteUser)
+    .patch([isAuth], updateUserData)
+    .put([isAuth], updateUserData)
+
+router.patch("/v1/update-password/:id", [isAuth], updateUserPassword);
 
 router.post("/v1/create-user", registerUser);
 router.post("/v1/login-user", logInUser);
+
 export default router;

@@ -2,19 +2,17 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 
-import userRoutes from './src/routes/UserRoutes.js'
-import postRoutes from './src/routes/PostRoutes.js'
+import routes from './src/routes/index.js'
 import ('./src/database/config.js')
 
+dotenv.config();
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-dotenv.config();
+app.use(routes)
 
 const port = process.env.PORT;
 
-app.use(userRoutes);
-app.use(postRoutes);
-
+console.log("Server running on port " + port);
 app.listen(port);
